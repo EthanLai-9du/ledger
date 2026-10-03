@@ -1,0 +1,36 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+
+# Secrets and local config
+.env
+.env.*
+*.jks
+*.keystore
+*.p12
+local.properties
+
+# Archives, backups, build artifacts
+*.tgz
+*.tar.gz
+*.zip
+*.apk
+*.aab
+
+# Node / Android (Capacitor)
+node_modules/
+android-app/www/*
+!android-app/www/native.js
+!android-app/www/cloud.js
+android-app/android/build/
+android-app/android/app/build/
+android-app/android/.gradle/
+
+# Working screenshots (curated images live in docs/screenshots/)
+shots/

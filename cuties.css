@@ -1,0 +1,77 @@
+/* v11 隐藏主题（需要解锁）：奶白 + 樱花粉，细描边像素面板；三只小伙伴趴在顶部卡片上。
+   颜色取自已确认的预览；对比度：正文 ≥ 4.5，交互控件边界 ≥ 3。 */
+:root[data-skin="cuties"] {
+  color-scheme: light;
+  --cp: 2px;
+  --bg: #fff5f7; --bg-dot: #fde3ea;
+  --paper: #fff5f7; --paper-2: #fff0f4; --card: #fffdfc;
+  --ink: #5e3a45; --ink-2: #8a5f6b; --ink-3: #8a5f6b; --muted: #8a5f6b;
+  --line: #f3cdd7; --line-2: #e9a9bb; --rule: #fbe6ec;
+  --panel: #fffdfc; --panel-hi: #ffffff; --panel-lo: #fff0f4;
+  --frame: #f3cdd7; --frame-hi: #f3cdd7; --frame-lo: #f3cdd7; --frame-dk: #f3cdd7; --drop: #fbe1e8;
+  --top: #fffdfc; --top-hi: #ffeef2; --top-ink: #5e3a45; --top-dk: #f3cdd7;
+  --accent: #b84f6e; --accent-hi: #f4a3b7; --accent-ink: #ffffff; --accent-soft: #ffe1e8; --accent2: #a8456a;
+  --btn: #b84f6e; --btn-lo: #9c3f5b; --btn-ink: #ffffff;
+  --chip: #ffeef2; --chip-ink: #7a4656;
+  --plot: #fff0f4; --plot-lo: #f8dde4;
+  --cell-off: #fff0f4; --cell-off-lo: #f8dde4; --cell-on: #ffe1e8; --cell-on-lo: #f3cdd7;
+  --today: #f4a3b7; --seg-off: #ffe1e8; --fx: #a94562; --good: #b84f6e;
+  --danger: #b0413a; --danger-soft: rgba(176, 65, 58, .1); --focus: #b84f6e;
+  --shadow: none;
+  --a-indigo: #6f8fd0; --a-pine: #5d9e68; --a-ochre: #c98445; --a-cinnabar: #d9607f; --a-plum: #b07ab8; --a-slate: #8a8fa6;
+  --heat-0: #fbe6ec; --heat-1: #f8cdd8; --heat-2: #f4a9bb; --heat-3: #e27e99; --heat-4: #c95576;
+}
+@media (min-width: 960px) { :root[data-skin="cuties"] { --cp: 3px; } }
+.px[data-skin="cuties"] body, .px[data-skin="cuties"] .gate {
+  background-color: var(--bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' shape-rendering='crispEdges'%3E%3Cpath fill='%23fde3ea' d='M4 4h1v1H4zM16 16h1v1h-1z'/%3E%3C/svg%3E");
+  background-size: calc(var(--p) * 24);
+}
+/* 面板：1 像素细粉描边（缺角）+ 一条软投影，大面积留白 */
+.px[data-skin="cuties"] :is(.hero, .section, .dlg, .gate__card, .sheet, .prefs__panel, .toast, .landing__features li) {
+  border: 0; background: var(--panel);
+  box-shadow:
+    0 calc(var(--p) * -1) 0 0 var(--line), 0 var(--p) 0 0 var(--line),
+    calc(var(--p) * -1) 0 0 0 var(--line), var(--p) 0 0 0 var(--line),
+    0 calc(var(--p) * 3) 0 calc(var(--p) * -1) var(--drop);
+}
+.px[data-skin="cuties"] .topbar { background: rgba(255, 253, 252, .94); box-shadow: 0 1px 0 0 var(--line); }
+.px[data-skin="cuties"] :is(.wordmark, .landing__mark) { color: var(--ink); text-shadow: none; }
+.px[data-skin="cuties"] .btn, .px[data-skin="cuties"] .skins__opt { box-shadow: 0 0 0 var(--p) var(--line-2); }
+.px[data-skin="cuties"] .btn--primary { box-shadow: inset calc(var(--p) * -1) calc(var(--p) * -1) 0 0 var(--btn-lo), 0 0 0 var(--p) var(--btn-lo); }
+.px[data-skin="cuties"] .skins--menu .skins__opt[aria-pressed="true"] { box-shadow: 0 0 0 var(--p) var(--btn-lo); }
+.px[data-skin="cuties"] .prefs__seg, .px[data-skin="cuties"] .lang-switch--menu { background: var(--line); }
+.px[data-skin="cuties"] .section__title::before {
+  width: calc(var(--p) * 5); height: calc(var(--p) * 4); box-shadow: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 5 4' shape-rendering='crispEdges'%3E%3Cpath fill='%23f4a3b7' d='M0 0h2v1h1V0h2v2H4v1H3v1H2V3H1V2H0z'/%3E%3C/svg%3E") center / 100% 100%;
+}
+.px[data-skin="cuties"] .pxcal { box-shadow: 0 0 0 var(--p) var(--line); background: var(--panel); }
+.px[data-skin="cuties"] .pxcal__season { background: var(--accent-soft); color: #5a2e3b; }
+.px[data-skin="cuties"] .seal { box-shadow: 0 0 0 var(--p) #c97a90; }
+
+/* 三只小伙伴：趴在顶部卡片的上沿（canvas 低分辨率，按 --cp 放大） */
+.px[data-skin="cuties"] .hero { position: relative; }
+.px[data-skin="cuties"] .crew {
+  display: block; position: absolute; z-index: 4; pointer-events: none;
+  right: calc(var(--p) * 4); top: calc(var(--p) * -1 - var(--cp) * var(--g, 44));
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}
+.px[data-skin="cuties"] .crew[hidden] { display: none; }
+@media (min-width: 960px) { .px[data-skin="cuties"] .crew { right: 6%; } }
+
+/* 打卡反馈：小花一弹 + 四颗小粉点 + 「开心 +1」 */
+.px .fx--cuties i { position: absolute; left: 50%; top: 50%; width: var(--p); height: var(--p); background: var(--accent-hi); animation: cute-spark .7s steps(5) forwards; }
+.px .fx--cuties i:nth-child(1) { --dx: -1; --dy: -1; } .px .fx--cuties i:nth-child(2) { --dx: 1; --dy: -1; }
+.px .fx--cuties i:nth-child(3) { --dx: -1; --dy: 1; } .px .fx--cuties i:nth-child(4) { --dx: 1; --dy: 1; }
+@keyframes cute-spark { to { transform: translate(calc(var(--dx) * var(--p) * 8), calc(var(--dy) * var(--p) * 8)); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .px .fx--cuties i { animation: none; display: none; } }
+.px[data-skin="cuties"] .guest { background: #fff0f4; box-shadow: 0 1px 0 0 var(--line); margin-bottom: 0; }
+.px[data-skin="cuties"] .guest__ico { width: calc(var(--p) * 5); height: calc(var(--p) * 4); box-shadow: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 5 4' shape-rendering='crispEdges'%3E%3Cpath fill='%23d9607f' d='M0 0h2v1h1V0h2v2H4v1H3v1H2V3H1V2H0z'/%3E%3C/svg%3E") center / 100% 100%; }
+.px[data-skin="cuties"] .onb-chip, .px[data-skin="cuties"] .onb__sync, .px[data-skin="cuties"] .onb__ownrow input { background: #fff; box-shadow: 0 0 0 var(--p) var(--line); }
+.px[data-skin="cuties"] .onb-chip:hover { background: #fff0f4; }
+.px[data-skin="cuties"] .onb-chip--own { box-shadow: 0 0 0 var(--p) #c97a90; background: transparent; }
+.px[data-skin="cuties"] .onb-chip--own[aria-expanded="true"] { background: var(--btn); color: #fff; }
+.px[data-skin="cuties"] .coach { background: #fffdfc; box-shadow: 0 0 0 var(--p) var(--line), 0 10px 30px -14px rgba(184, 79, 110, .45); }
+.px[data-skin="cuties"] .coach::before { background: #fffdfc; box-shadow: calc(var(--p) * -1) calc(var(--p) * -1) 0 0 var(--line); }
+.px[data-skin="cuties"] .coach-ring { box-shadow: 0 0 0 calc(var(--p) * 1.5) var(--accent), 0 0 0 9999px rgba(94, 58, 69, .38); }

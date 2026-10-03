@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ledger_paper">#F6F5F1</color>
+    <color name="ledger_ink">#1E1F1C</color>
+</resources>

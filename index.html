@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ledger · 安静的进度账本</title>
+<meta name="description" content="Ledger：安静地记录目标、习惯与每周进度。离线可用，可云端同步。">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F6F5F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141513" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ledger">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231E1F1C'/%3E%3Ctext x='29' y='45' font-size='36' text-anchor='middle' fill='%23F6F5F1' font-family='Georgia,serif'%3EL%3C/text%3E%3Ccircle cx='45' cy='43' r='3.2' fill='%2393B3A0'/%3E%3C/svg%3E">
+<script>
+  // 尽早应用主题（田园 / 电玩 / 星夜 / 简约）、简约主题的明暗与语言，避免闪烁；按主题和语言只预加载首屏真正用到的字体
+  (function () {
+    var d = document.documentElement, l = null, s = null;
+    try {
+      var t = localStorage.getItem('growth-plan:theme');
+      if (t === 'light' || t === 'dark') d.dataset.theme = t;
+      l = localStorage.getItem('growth-plan:lang');
+      s = localStorage.getItem('growth-plan:skin');
+      var u = localStorage.getItem('growth-plan:cuties') === '1';
+    } catch (e) {}
+    if (l !== 'zh' && l !== 'en') l = /^zh/i.test((navigator.languages && navigator.languages[0]) || navigator.language || 'zh') ? 'zh' : 'en';
+    if (!/^(farm|arcade|night|minimal)$/.test(s || '') && !(s === 'cuties' && u)) s = 'farm';          // 新用户 / 没选过主题：田园
+    d.setAttribute('data-lang', l); d.lang = l === 'en' ? 'en' : 'zh-CN';
+    d.setAttribute('data-skin', s); if (s !== 'minimal') d.classList.add('px');
+    var tc = { farm: '#8b5428', arcade: '#0b0a1f', night: '#0d1636', cuties: '#fff5f7' }[s];
+    if (tc) Array.prototype.forEach.call(document.querySelectorAll('meta[name="theme-color"]'), function (m) { m.content = tc; });
+    function pre(href) { var p = document.createElement('link'); p.rel = 'preload'; p.as = 'font'; p.type = 'font/woff2'; p.crossOrigin = 'anonymous'; p.href = href; document.head.appendChild(p); }
+    if (s === 'minimal') { pre('fonts/ledger-serif.woff2'); if (l === 'zh') pre('fonts/ledger-serif-sc-ui.woff2'); }   // 中文只预加载关键切片 -ui，约 40 KB
+    else { pre(l === 'zh' ? 'fonts/px-sc-ui.woff2' : 'fonts/px-latin.woff2'); if (s === 'arcade') pre('fonts/px-arcade.woff2'); }
+    document.documentElement.classList.add('js');
+    // 英文模式：在 i18n.js 翻译完静态文案前先不绘制，避免中文一闪（万一脚本失败，2 秒后照常显示）
+    if (l === 'en') { d.classList.add('i18n-pending'); setTimeout(function () { d.classList.remove('i18n-pending'); }, 2000); }
+    // Android 壳（Capacitor）内：隐藏「下载安卓版」
+    if (window.Capacitor || /LedgerAndroid/.test(navigator.userAgent)) document.documentElement.classList.add('is-native');
+  })();
+</script>
+<!-- 简约主题的标题字体：<link rel="preload" href="fonts/ledger-serif.woff2"> 由上面的脚本按主题加上（像素主题不用它，避免「预加载了却没用」） -->
+<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="pixel.css?v=12">
+<link rel="stylesheet" href="cuties.css?v=12">
+<link rel="stylesheet" href="tabs.css?v=12">
+<!-- 中文常用字切片（衬线 / 像素，都只声明 @font-face，按 unicode-range 按需下载）：非阻塞加载 -->
+<link rel="stylesheet" href="fonts/serif-sc.css?v=12" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="fonts/px-sc.css?v=12" media="print" onload="this.media='all'">
+</head>
+<body>
+<!-- 加载画面：脚本与字体就绪后淡出（不拦截点击；减弱动态时直接消失） -->
+<div class="boot" id="boot" aria-hidden="true"><div class="boot__art" id="bootArt"></div><p class="boot__word">Ledger</p><div class="boot__bar"><i></i></div></div>
+<div class="crt" aria-hidden="true"></div>
+<a class="skip" href="#main">跳到主要内容</a>
+
+<header class="topbar" id="top">
+  <div class="topbar__inner">
+    <a class="brand" href="#top" aria-label="Ledger，回到顶部">
+      <span class="wordmark" aria-hidden="true">Ledger<i></i></span>
+    </a>
+    <button class="sync-pill" id="syncPill" type="button" aria-haspopup="dialog" data-state="local">
+      <span class="sync-pill__dot" aria-hidden="true"></span>
+      <span class="sync-pill__text" id="syncText">登录同步</span>
+      <span class="sync-pill__who" id="syncWho" hidden></span>
+    </button>
+  </div>
+</header>
+
+<!-- v12：四个标签页。手机：底部导航；桌面：左侧栏。哈希路由 #/today #/stats #/habits #/me -->
+<nav class="tabbar" id="tabbar" aria-label="主导航">
+  <span class="tabbar__brand" aria-hidden="true">Ledger</span>
+  <a class="tabbar__a" href="#/today" data-tab="today" aria-current="page"><span class="tabbar__ico" data-ico="today" aria-hidden="true"></span><span class="tabbar__t">今天</span></a>
+  <a class="tabbar__a" href="#/stats" data-tab="stats"><span class="tabbar__ico" data-ico="stats" aria-hidden="true"></span><span class="tabbar__t">统计</span></a>
+  <a class="tabbar__a" href="#/habits" data-tab="habits"><span class="tabbar__ico" data-ico="habits" aria-hidden="true"></span><span class="tabbar__t" data-i18n="@tabHabits">习惯</span></a>
+  <a class="tabbar__a" href="#/me" data-tab="me"><span class="tabbar__ico" data-ico="me" aria-hidden="true"></span><span class="tabbar__t">我的</span></a>
+</nav>
+
+<!-- 游客模式提示：没登录时显示在顶栏下方；本次会话内可关掉，登录后自动消失 -->
+<div class="guest" id="guest" role="region" aria-labelledby="guestT" hidden>
+  <div class="guest__inner">
+    <span class="guest__ico" aria-hidden="true"></span>
+    <p class="guest__t" id="guestT" data-i18n="@guest">游客模式：数据只存在本机，登录后才会同步到云端</p>
+    <button type="button" class="btn btn--primary btn--sm guest__go" id="guestGo" data-i18n="@guestGo">登录 / 注册</button>
+    <button type="button" class="guest__x" id="guestX" aria-label="本次不再提示"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+</div>
+
+<!-- 像素主题的场景条（装饰）：田园 / 电玩 / 星夜各一幅；简约主题隐藏 -->
+<div class="scene" aria-hidden="true"><canvas id="scene"></canvas><div class="scene__fx" id="sceneFx"></div><div class="hud" id="hud"></div></div>
+
+<main id="main">
+  <div class="tab" id="tab-today" data-tab="today">
+  <!-- ========== HERO ========== -->
+  <section class="hero" aria-labelledby="heroTitle">
+    <canvas class="crew" id="crew" aria-hidden="true" hidden></canvas>
+    <div class="hero__grid">
+      <div class="pxcal" aria-hidden="true"><span class="pxcal__season" id="calSeason"></span><span class="pxcal__num" id="calNum"></span><span class="pxcal__dow" id="calDow"></span></div>
+      <div class="hero__text">
+        <p class="overline reveal" style="--i:0"><span id="heroDay"></span><span class="sep" aria-hidden="true"></span><span id="heroWeek"></span><span class="sep" aria-hidden="true"></span><span id="heroYear">2026</span></p>
+        <h1 class="hero__title reveal" style="--i:1" id="heroTitle">
+          <span class="hero__date"><span id="heroMonth">10</span><span class="hero__slash">/</span><span id="heroDate">02</span></span>
+          <span class="hero__motto" id="motto"></span>
+        </h1>
+        <div class="hero__actions reveal" style="--i:2">
+          <span class="hero__hint" id="heroHint"></span>
+          <button class="link-btn link-btn--quiet" type="button" id="editMotto">改写这句话</button>
+        </div>
+        <p class="hero__tag" id="heroTag"></p>
+      </div>
+
+      <figure class="today-ring reveal" style="--i:2" aria-labelledby="ringCaption">
+        <div class="today-ring__dial">
+          <svg viewBox="0 0 200 200" class="ring" aria-hidden="true">
+            <circle class="ring__track" cx="100" cy="100" r="80"/>
+            <circle class="ring__bar" id="ringBar" cx="100" cy="100" r="80"/>
+          </svg>
+          <div class="today-ring__center">
+            <span class="today-ring__pct"><span id="ringPct">0</span><small>%</small></span>
+            <span class="today-ring__count" id="ringCount">0 / 0</span>
+          </div>
+          <span class="segs" id="todaySegs" aria-hidden="true"></span>
+        </div>
+        <figcaption id="ringCaption" class="today-ring__cap"><span>今天的完成度</span><span class="today-ring__hint" id="ringHint"></span><a class="today-ring__go" href="#today">去打卡 <span aria-hidden="true">↓</span></a></figcaption>
+      </figure>
+    </div>
+
+    <dl class="stats reveal" style="--i:3">
+      <div class="stat"><dt>最长连续</dt><dd><span class="stat__num" id="statStreak">0</span><span class="stat__unit">天</span></dd><dd class="stat__sub" id="statStreakSub">—</dd></div>
+      <div class="stat"><dt>本周达成</dt><dd><span class="stat__num" id="statWeek">0</span><span class="stat__unit">%</span></dd><dd class="stat__sub" id="statWeekSub">—</dd></div>
+      <div class="stat"><dt>目标推进</dt><dd><span class="stat__num" id="statGoals">0</span><span class="stat__unit">%</span></dd><dd class="stat__sub" id="statGoalsSub">—</dd></div>
+      <div class="stat"><dt>累计打卡</dt><dd><span class="stat__num" id="statTotal">0</span><span class="stat__unit">次</span></dd><dd class="stat__sub" id="statTotalSub">—</dd></div>
+    </dl>
+  </section>
+
+  <!-- ========== 今天 ========== -->
+  <section class="section" id="today" aria-labelledby="todayTitle">
+    <header class="section__head">
+      <div>
+        
+        <h2 class="section__title" id="todayTitle">今天</h2>
+        <p class="section__lede">做完一项，轻点一下。不必每天满分，持续就好。</p>
+        <p class="section__skin" id="todaySkin"></p>
+      </div>
+      <button class="btn btn--ghost" type="button" data-action="add-habit"><span aria-hidden="true">＋</span> 新习惯</button>
+    </header>
+    <div class="section__body">
+      <ol class="habits" id="habitList" aria-label="今天的习惯"></ol>
+      <div class="habits-off habits-flex" id="habitFlexWrap" hidden>
+        <h3 class="mini-title">这周还差几次 <span>哪天做都行，不计入今天的完成度</span></h3>
+        <ol class="habits habits--flex" id="habitFlexList" aria-label="这周还要完成的习惯"></ol>
+      </div>
+      <div class="habits-off" id="habitOffWrap" hidden>
+        <h3 class="mini-title">今天不安排 <span>不计入完成度，也可额外打卡</span></h3>
+        <ol class="habits habits--off" id="habitOffList" aria-label="今天没有安排的习惯"></ol>
+      </div>
+      <div class="empty empty--habits" id="habitEmpty" hidden>
+        <p class="empty__t">还没有习惯</p>
+        <p class="empty__d">从一件小事开始，比如睡前读 10 页书。点「新习惯」加一个吧。</p>
+        <button class="btn btn--primary empty__go" type="button" data-action="add-habit"><span aria-hidden="true">＋</span> 新习惯</button>
+      </div>
+    </div>
+  </section>
+
+  </div>
+  <div class="tab" id="tab-stats" data-tab="stats" hidden>
+  <!-- ========== 本周 ========== -->
+  <section class="section" id="week" aria-labelledby="weekTitle">
+    <header class="section__head">
+      <div>
+        
+        <h1 class="section__title" id="weekTitle">统计</h1>
+        <p class="section__lede">连续记录、这周完成率和这一年的热力图。点格子可以补记。</p>
+      </div>
+      <div class="week-nav" role="group" aria-label="切换周">
+        <button class="icon-btn" type="button" id="weekPrev" aria-label="上一周"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span class="week-nav__label" id="weekLabel" aria-live="polite">—</span>
+        <button class="icon-btn" type="button" id="weekNext" aria-label="下一周"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        <button class="link-btn" type="button" id="weekNow">回到本周</button>
+      </div>
+    </header>
+    <div class="section__body">
+      <h2 class="mini-title tab-sub" id="weekSub">本周 <span>回看七天，补记遗漏</span></h2>
+      <div class="week-scroll">
+        <table class="week" id="weekTable">
+          <caption class="sr-only">本周每天的习惯完成情况，点击格子可补记或取消</caption>
+          <thead></thead>
+          <tbody></tbody>
+          <tfoot></tfoot>
+        </table>
+      </div>
+
+      <p class="week-legend"><span class="week-legend__rest" aria-hidden="true"></span>虚线格＝那天不需要打卡（也可以额外记一次）</p>
+
+      <div class="heat year" id="year">
+       <div class="heat__main">
+        <div class="heat__head">
+          <h2 class="mini-title"><span class="heat__span" id="heatSpan">这一年</span> <span>每格一天 · 按当天完成比例着色 · 点一格查看那天</span></h2>
+          <div class="heat__legend" aria-hidden="true"><span>少</span><i data-l="0"></i><i data-l="1"></i><i data-l="2"></i><i data-l="3"></i><i data-l="4"></i><span>多</span><i class="heat__legend-note"></i><span>有笔记</span></div>
+        </div>
+        <div class="heat__wrap year__scroll" id="yearScroll">
+          <div class="heat__months" id="heatMonths" aria-hidden="true"></div>
+          <div class="heat__row">
+            <div class="heat__days" aria-hidden="true"><span>一</span><span></span><span>三</span><span></span><span>五</span><span></span><span></span></div>
+            <div class="heat__grid" id="heatGrid" role="group" aria-label="完成热力图"></div>
+          </div>
+        </div>
+       </div>
+        <dl class="heat__aside">
+          <div><dt>平均完成率</dt><dd id="heatAvg">0<small>%</small></dd></div>
+          <div><dt>全勤天数</dt><dd id="heatFull">0<small>天</small></dd></div>
+          <div><dt>最佳单周</dt><dd id="heatBest">—</dd></div>
+        </dl>
+      </div>
+
+      <div class="year__more">
+        <section class="daycard" id="dayCard" aria-labelledby="dayCardTitle">
+          <div class="daycard__head">
+            <button class="icon-btn" type="button" id="dayPrev" aria-label="前一天"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <h2 class="daycard__title" id="dayCardTitle" aria-live="polite">—</h2>
+            <button class="icon-btn" type="button" id="dayNext" aria-label="后一天"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+          </div>
+          <p class="daycard__sum" id="daySum"></p>
+          <ul class="daycard__list" id="dayList"></ul>
+          <form class="note note--day" id="dayNoteForm" autocomplete="off">
+            <label class="note__k" for="dayNoteIn" id="dayNoteK">那天做了什么</label>
+            <div class="note__row">
+              <input id="dayNoteIn" class="note__in" maxlength="80" placeholder="还没有笔记">
+              <button class="btn btn--ghost note__save" type="submit">记下</button>
+            </div>
+          </form>
+        </section>
+        <section class="hstats" aria-labelledby="hstatsTitle">
+          <h2 class="mini-title" id="hstatsTitle">每个习惯 <span>当前连续 · 最长连续 · 这周完成</span></h2>
+          <table class="hstats__t" id="hstats">
+            <caption class="sr-only">每个习惯的连续次数与这周完成率</caption>
+            <thead><tr><th scope="col">习惯</th><th scope="col">当前</th><th scope="col">最长</th><th scope="col">这周</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </section>
+        <section class="notes-hist" aria-labelledby="notesTitle">
+          <h2 class="mini-title" id="notesTitle">最近的笔记</h2>
+          <ol class="notes-hist__list" id="notesList"></ol>
+          <p class="notes-hist__empty" id="notesEmpty">还没有笔记。在「今天」下面写一句，就会出现在这里。</p>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  </div>
+  <div class="tab" id="tab-habits" data-tab="habits" hidden>
+  <section class="section" id="habitsMgr" aria-labelledby="mgrTitle">
+    <header class="section__head">
+      <div>
+        <h1 class="section__title" id="mgrTitle" data-i18n="@tabHabits">习惯</h1>
+        <p class="section__lede">新建、编辑、调整顺序；暂时不做的可以归档，记录都会保留。</p>
+      </div>
+      <button class="btn btn--primary" type="button" data-action="add-habit"><span aria-hidden="true">＋</span> 新习惯</button>
+    </header>
+    <div class="section__body">
+      <ol class="mgr" id="mgrList" aria-label="全部习惯"></ol>
+      <p class="empty" id="mgrEmpty" hidden>还没有习惯。点「新习惯」加一个吧。</p>
+      <details class="mgr-arch" id="mgrArchWrap" hidden>
+        <summary class="mgr-arch__sum"><span id="mgrArchSum">已归档</span></summary>
+        <ol class="mgr mgr--arch" id="mgrArch" aria-label="已归档的习惯"></ol>
+      </details>
+    </div>
+  </section>
+  <!-- ========== 目标 ========== -->
+  <section class="section" id="goals" aria-labelledby="goalsTitle">
+    <header class="section__head">
+      <div>
+        
+        <h2 class="section__title" id="goalsTitle">目标</h2>
+        <p class="section__lede">把大目标拆成看得见的步骤。按领域归档，随时增删。</p>
+      </div>
+      <div class="head-actions">
+        <button class="btn btn--ghost" type="button" data-action="edit-areas">管理领域</button>
+        <button class="btn btn--primary" type="button" data-action="add-goal"><span aria-hidden="true">＋</span> 新目标</button>
+      </div>
+    </header>
+    <div class="section__body">
+      <div class="chips" id="areaChips" role="toolbar" aria-label="按领域筛选"></div>
+      <div class="goals" id="goalGrid"></div>
+      <p class="empty" id="goalEmpty" hidden>这个领域还没有目标。写下一个三个月内想完成的事吧。</p>
+    </div>
+  </section>
+
+  </div>
+  <div class="tab" id="tab-me" data-tab="me" hidden>
+  <section class="section me" id="me" aria-labelledby="meTitle">
+    <header class="section__head">
+      <div>
+        <h1 class="section__title" id="meTitle">我的</h1>
+        <p class="section__lede">账号与同步、主题、语言、提醒和数据。</p>
+      </div>
+    </header>
+    <div class="section__body me__body">
+      <div class="me__card me__acct">
+        <h2 class="me__h" id="meAcctH">账号与同步</h2>
+        <p class="me__acctT" id="meAcctT">登录后，换手机也不丢。</p>
+        <button class="btn btn--primary" type="button" id="meAcctBtn">登录 / 注册</button>
+      </div>
+      <div class="me__card me__prefs" id="prefs">
+        <div class="prefs__panel prefs__panel--page" id="prefsMenu" role="group" aria-labelledby="meSetH">
+          <h2 class="me__h" id="meSetH">设置</h2>
+
+        <div class="prefs__grp prefs__grp--skin">
+          <p class="prefs__k" id="prefsSkinK">主题</p>
+          <div class="skins skins--menu" role="group" aria-labelledby="prefsSkinK" data-skin-switch></div>
+          <div class="prefs__mode" id="prefsMode">
+            <p class="prefs__k prefs__k--sub" id="prefsThemeK">明暗</p>
+            <div class="prefs__seg" role="group" aria-labelledby="prefsThemeK">
+              <button type="button" class="prefs__opt" data-set-theme="system" aria-pressed="false">跟随系统</button>
+              <button type="button" class="prefs__opt" data-set-theme="light" aria-pressed="false">浅色</button>
+              <button type="button" class="prefs__opt" data-set-theme="dark" aria-pressed="false">深色</button>
+            </div>
+          </div>
+        </div>
+        <div class="prefs__grp prefs__grp--mob">
+          <p class="prefs__k" aria-hidden="true">语言</p>
+          <div class="lang-switch lang-switch--menu" data-lang-switch></div>
+        </div>
+        <!-- 每天提醒：安卓 App 用本机定时通知；网页只在页面开着时提醒（见 app.js「每天提醒」） -->
+        <div class="prefs__grp prefs__grp--rem" id="remGrp" role="group" aria-labelledby="remK" hidden>
+          <p class="prefs__k" id="remK">每天提醒</p>
+          <div class="rem">
+            <label class="rem__row rem__toggle">
+              <span class="rem__label">提醒我记一笔</span>
+              <input type="checkbox" class="rem__input" id="remOn" role="switch" aria-describedby="remHelp">
+              <span class="rem__track" aria-hidden="true"></span>
+            </label>
+            <label class="rem__row">
+              <span class="rem__label">时间</span>
+              <input type="time" class="rem__time" id="remTime" value="21:00" step="300" required aria-label="提醒时间">
+            </label>
+          </div>
+          <p class="rem__help" id="remHelp"><span id="remHelpText"></span> <a class="rem__apk" id="remApk" href="ledger.apk" download hidden>下载安卓版</a></p>
+        </div>
+        <div class="prefs__grp prefs__grp--guide">
+          <button type="button" class="prefs__opt prefs__guide" id="prefsGuide">重新看新手指引</button>
+        </div>
+        <div class="prefs__grp prefs__grp--export" role="group" aria-labelledby="prefsExportK">
+          <p class="prefs__k" id="prefsExportK">导出全部数据</p>
+          <div class="prefs__seg">
+            <button type="button" class="prefs__opt prefs__opt--dl" id="prefsJson">JSON</button>
+            <button type="button" class="prefs__opt prefs__opt--dl" id="prefsCsv">CSV</button>
+          </div>
+        </div>
+        </div>
+      </div>
+      <div class="me__card me__data">
+        <h2 class="me__h" id="dataTitle">数据与备份</h2>
+        <p class="me__lede" id="dataLede"></p>
+      <div class="data-grid">
+        <button class="data-card" type="button" id="exportBtn">
+          <span class="data-card__k">导出</span>
+          <span class="data-card__t">下载 JSON 备份</span>
+          <span class="data-card__d" id="dataSize">—</span>
+        </button>
+        <button class="data-card" type="button" id="csvBtn">
+          <span class="data-card__k">表格</span>
+          <span class="data-card__t">下载 CSV</span>
+          <span class="data-card__d">每天一行，可用 Excel 打开</span>
+        </button>
+        <label class="data-card" for="importFile" tabindex="0" id="importLabel">
+          <span class="data-card__k">导入</span>
+          <span class="data-card__t">从 JSON 恢复</span>
+          <span class="data-card__d">会覆盖当前数据</span>
+          <input type="file" id="importFile" accept="application/json,.json" class="sr-only" tabindex="-1">
+        </label>
+        <button class="data-card" type="button" id="sampleBtn">
+          <span class="data-card__k">示例</span>
+          <span class="data-card__t">恢复示例内容</span>
+          <span class="data-card__d">重新载入初始计划</span>
+        </button>
+        <button class="data-card data-card--danger" type="button" id="resetBtn">
+          <span class="data-card__k">清空</span>
+          <span class="data-card__t">从零开始</span>
+          <span class="data-card__d">删除全部目标、习惯与记录</span>
+        </button>
+      </div>
+      </div>
+      <div class="me__card me__about">
+        <h2 class="me__h" id="meAboutH">关于</h2>
+        <p class="me__lede">Ledger：安静地记下每一点进步。离线可用，登录后自动同步。</p>
+        <p class="prefs__foot" id="prefsFoot" aria-hidden="true"><span class="prefs__logo" id="prefsLogo"><svg class="px" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><rect x="2" y="0" width="12" height="1" fill="#1e1f1c"/><rect x="1" y="1" width="14" height="1" fill="#1e1f1c"/><rect x="0" y="2" width="16" height="1" fill="#1e1f1c"/><rect x="0" y="3" width="16" height="1" fill="#1e1f1c"/><rect x="0" y="4" width="4" height="1" fill="#1e1f1c"/><rect x="4" y="4" width="2" height="1" fill="#f6f5f1"/><rect x="6" y="4" width="10" height="1" fill="#1e1f1c"/><rect x="0" y="5" width="4" height="1" fill="#1e1f1c"/><rect x="4" y="5" width="2" height="1" fill="#f6f5f1"/><rect x="6" y="5" width="10" height="1" fill="#1e1f1c"/><rect x="0" y="6" width="4" height="1" fill="#1e1f1c"/><rect x="4" y="6" width="2" height="1" fill="#f6f5f1"/><rect x="6" y="6" width="10" height="1" fill="#1e1f1c"/><rect x="0" y="7" width="4" height="1" fill="#1e1f1c"/><rect x="4" y="7" width="2" height="1" fill="#f6f5f1"/><rect x="6" y="7" width="10" height="1" fill="#1e1f1c"/><rect x="0" y="8" width="4" height="1" fill="#1e1f1c"/><rect x="4" y="8" width="2" height="1" fill="#f6f5f1"/><rect x="6" y="8" width="10" height="1" fill="#1e1f1c"/><rect x="0" y="9" width="4" height="1" fill="#1e1f1c"/><rect x="4" y="9" width="2" height="1" fill="#f6f5f1"/><rect x="6" y="9" width="10" height="1" fill="#1e1f1c"/><rect x="0" y="10" width="4" height="1" fill="#1e1f1c"/><rect x="4" y="10" width="5" height="1" fill="#f6f5f1"/><rect x="9" y="10" width="1" height="1" fill="#1e1f1c"/><rect x="10" y="10" width="2" height="1" fill="#7cc04a"/><rect x="12" y="10" width="4" height="1" fill="#1e1f1c"/><rect x="0" y="11" width="4" height="1" fill="#1e1f1c"/><rect x="4" y="11" width="5" height="1" fill="#f6f5f1"/><rect x="9" y="11" width="1" height="1" fill="#1e1f1c"/><rect x="10" y="11" width="2" height="1" fill="#7cc04a"/><rect x="12" y="11" width="4" height="1" fill="#1e1f1c"/><rect x="0" y="12" width="16" height="1" fill="#1e1f1c"/><rect x="0" y="13" width="16" height="1" fill="#1e1f1c"/><rect x="1" y="14" width="14" height="1" fill="#1e1f1c"/><rect x="2" y="15" width="12" height="1" fill="#1e1f1c"/></svg></span><span class="prefs__ver" id="prefsVer">Ledger · v12</span></p>
+      </div>
+    </div>
+  </section>
+  </div>
+<!-- 新手指引第 2 步的聚光圈和提示（固定定位，放在 main 里只是为了地标结构） -->
+<div class="coach-ring" id="coachRing" aria-hidden="true" hidden></div>
+<div class="coach" id="coach" role="group" aria-labelledby="coachT" hidden>
+  <p class="onb__step">第 2 步，共 3 步</p>
+  <p class="coach__t" id="coachT" aria-live="polite">做完就点一下</p>
+  <p class="coach__d" id="coachD">轻点这个方框，记下第一次打卡。</p>
+  <div class="coach__actions"><button type="button" class="btn btn--ghost btn--sm" id="coachSkip">跳过</button></div>
+  <span class="coach__burst" id="coachBurst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+</div>
+</main>
+
+<footer class="footer">
+  <p class="footer__mark" aria-hidden="true">Ledger<i></i></p>
+  <p class="footer__meta" id="footerMeta">离线可用 · 数据仅存于本机</p>
+</footer>
+
+<!-- ========== 对话框 ========== -->
+<dialog class="dlg" id="dlgHabit" aria-labelledby="dlgHabitTitle">
+  <form method="dialog" class="dlg__form" id="formHabit">
+    <h2 class="dlg__title" id="dlgHabitTitle">新习惯</h2>
+    <div class="field">
+      <label for="hName">习惯名称</label>
+      <input id="hName" name="name" required maxlength="60" placeholder="例如：阅读 20 分钟" autocomplete="off">
+    </div>
+    <div class="field-row">
+      <div class="field field--seal">
+        <label for="hSeal">标记字</label>
+        <input id="hSeal" name="seal" maxlength="1" placeholder="读" autocomplete="off" aria-describedby="hSealHint">
+        <small id="hSealHint">一个字，显示在打卡按钮上</small>
+      </div>
+      <div class="field">
+        <label for="hArea">所属领域</label>
+        <select id="hArea" name="area"></select>
+      </div>
+    </div>
+    <fieldset class="field freq">
+      <legend>频率</legend>
+      <div class="freq__opts" id="hFreq">
+        <label class="freq__opt"><input type="radio" name="freq" value="daily"><span>每天</span></label>
+        <label class="freq__opt"><input type="radio" name="freq" value="weekdays"><span>周一至周五</span></label>
+        <label class="freq__opt"><input type="radio" name="freq" value="days"><span>指定几天</span></label>
+        <label class="freq__opt"><input type="radio" name="freq" value="weekly"><span>每周几次</span></label>
+      </div>
+      <div class="days" id="hDays" role="group" aria-label="每周哪几天"></div>
+      <div class="freq__n" id="hTargetRow">
+        <label for="hTarget">每周</label>
+        <input id="hTarget" type="number" min="1" max="7" step="1" value="3" inputmode="numeric">
+        <span id="hTargetUnit">次，哪天做都行</span>
+      </div>
+    </fieldset>
+    <div class="dlg__actions">
+      <button class="btn btn--danger-ghost" type="button" id="hDelete" hidden>删除</button>
+      <span class="spacer"></span>
+      <button class="btn btn--ghost" type="button" data-close>取消</button>
+      <button class="btn btn--primary" type="submit" value="ok">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dlg" id="dlgGoal" aria-labelledby="dlgGoalTitle">
+  <form method="dialog" class="dlg__form" id="formGoal">
+    <h2 class="dlg__title" id="dlgGoalTitle">新目标</h2>
+    <div class="field">
+      <label for="gTitle" data-i18n="@goalLabel">目标</label>
+      <input id="gTitle" name="title" required maxlength="80" placeholder="例如：按时完成所有作业" autocomplete="off">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="gArea">所属领域</label>
+        <select id="gArea" name="area"></select>
+      </div>
+      <div class="field">
+        <label for="gDue">截止 <span class="opt">可选</span></label>
+        <input id="gDue" name="due" type="date">
+      </div>
+    </div>
+    <div class="field">
+      <label for="gNote">为什么重要 <span class="opt">可选</span></label>
+      <input id="gNote" name="note" maxlength="80" placeholder="一句话提醒未来的自己" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="gTasks">拆解步骤 <span class="opt">每行一步</span></label>
+      <textarea id="gTasks" name="tasks" rows="5" placeholder="列出要做的事&#10;拆成几个小步骤&#10;每周检查进度"></textarea>
+    </div>
+    <div class="dlg__actions">
+      <button class="btn btn--danger-ghost" type="button" id="gDelete" hidden>删除</button>
+      <span class="spacer"></span>
+      <button class="btn btn--ghost" type="button" data-close>取消</button>
+      <button class="btn btn--primary" type="submit" value="ok">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dlg" id="dlgAreas" aria-labelledby="dlgAreasTitle">
+  <form method="dialog" class="dlg__form" id="formAreas">
+    <h2 class="dlg__title" id="dlgAreasTitle">管理领域</h2>
+    <p class="dlg__lede">重命名、换色或删除领域。删除后，其中的目标和习惯会移到第一个领域。</p>
+    <ul class="area-list" id="areaList"></ul>
+    <button class="link-btn" type="button" id="areaAdd">＋ 添加领域</button>
+    <div class="dlg__actions">
+      <span class="spacer"></span>
+      <button class="btn btn--ghost" type="button" data-close>取消</button>
+      <button class="btn btn--primary" type="submit" value="ok">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dlg dlg--sm" id="dlgNote" aria-labelledby="dlgNoteTitle">
+  <div class="dlg__form">
+    <h2 class="dlg__title" id="dlgNoteTitle">今天做了什么</h2>
+      <form class="note" id="noteForm" autocomplete="off">
+        <label class="note__k sr-only" for="noteIn">今天做了什么</label>
+        <div class="note__row">
+          <input id="noteIn" class="note__in" maxlength="80" placeholder="可选：用一句话记下今天" aria-describedby="noteHint">
+          <button class="btn btn--ghost note__save" type="submit">记下</button>
+        </div>
+        <small class="note__hint" id="noteHint">会同步，也能在下面的「这一年」里翻看。</small>
+      </form>
+    <div class="dlg__actions"><span class="spacer"></span><button class="btn btn--ghost" type="button" data-close>关闭</button></div>
+  </div>
+</dialog>
+
+<dialog class="dlg dlg--sm" id="dlgConfirm" aria-labelledby="dlgConfirmTitle">
+  <form method="dialog" class="dlg__form">
+    <h2 class="dlg__title" id="dlgConfirmTitle">确定吗？</h2>
+    <p class="dlg__lede" id="dlgConfirmText"></p>
+    <div class="dlg__actions">
+      <span class="spacer"></span>
+      <button class="btn btn--ghost" value="cancel">取消</button>
+      <button class="btn btn--danger" value="ok" id="dlgConfirmOk">确定</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dlg dlg--sm" id="dlgMotto" aria-labelledby="dlgMottoTitle">
+  <form method="dialog" class="dlg__form" id="formMotto">
+    <h2 class="dlg__title" id="dlgMottoTitle">一句话</h2>
+    <div class="field">
+      <label for="mText">写一句给自己的话（可留空换回默认）</label>
+      <input id="mText" maxlength="60" autocomplete="off">
+    </div>
+    <div class="dlg__actions">
+      <span class="spacer"></span>
+      <button class="btn btn--ghost" type="button" data-close>取消</button>
+      <button class="btn btn--primary" value="ok">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ========== 新手指引（3 步，每步都能跳过；完成标记存在 prefs.onboarded 并镜像到本机） ========== -->
+<dialog class="dlg dlg--sm onb" id="dlgOnb" aria-labelledby="onbTitle" aria-describedby="onbLede">
+  <div class="onb__body">
+    <p class="onb__step" id="onbStep">第 1 步，共 3 步</p>
+    <div class="onb__pane" id="onbPane1">
+      <span class="onb__art" id="onbArt1" aria-hidden="true"></span>
+      <h2 class="dlg__title onb__title" id="onbTitle">选第一个习惯</h2>
+      <p class="dlg__lede onb__lede" id="onbLede">先从一件小事开始，以后随时可以再加。</p>
+      <div class="onb__chips" role="group" aria-labelledby="onbTitle">
+        <button type="button" class="onb-chip" data-tpl="read">阅读</button>
+        <button type="button" class="onb-chip" data-tpl="sleep">早睡</button>
+        <button type="button" class="onb-chip" data-tpl="move">运动</button>
+        <button type="button" class="onb-chip" data-tpl="money">记账</button>
+        <button type="button" class="onb-chip onb-chip--own" data-tpl="own" aria-expanded="false" aria-controls="onbOwn">自己写</button>
+      </div>
+      <form class="onb__own" id="onbOwn" autocomplete="off" hidden>
+        <label for="onbName">想养成什么习惯？</label>
+        <div class="onb__ownrow">
+          <input id="onbName" maxlength="60" placeholder="比如：喝 8 杯水" aria-describedby="onbNameErr">
+          <button class="btn btn--primary" type="submit" data-i18n="@onbAdd">加上</button>
+        </div>
+        <p class="field__err" id="onbNameErr" aria-live="polite"></p>
+      </form>
+    </div>
+    <div class="onb__pane" id="onbPane3" hidden>
+      <span class="onb__art" id="onbArt3" aria-hidden="true"></span>
+      <h2 class="dlg__title onb__title" id="onbTitle3">接下来，慢慢积累</h2>
+      <p class="dlg__lede onb__lede" id="onbLede3">每打一次卡，连续记录和年度热力图都会慢慢长出来。</p>
+      <div class="onb__sync" id="onbSync">
+        <p class="onb__synct" id="onbSyncT">登录后换手机也不丢</p>
+        <button type="button" class="btn btn--ghost btn--sm" id="onbLogin" data-i18n="@onbLogin">登录 / 注册</button>
+      </div>
+    </div>
+    <div class="dlg__actions onb__actions">
+      <button type="button" class="btn btn--ghost onb__skip" id="onbSkip">跳过</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn btn--primary" id="onbStart" hidden>开始吧</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ========== 登录 / 同步 ========== -->
+<dialog class="gate" id="gate" data-sticky data-view="auth" aria-labelledby="gateTitle" aria-describedby="gateLede">
+  <!-- ========== 首页（未登录时先看到这里） ========== -->
+  <div class="landing" id="landing" tabindex="-1" autofocus>
+    <header class="landing__top">
+      <p class="landing__mark" aria-hidden="true">Ledger<i></i></p>
+      <div class="lang-switch" data-lang-switch></div>
+    </header>
+
+    <canvas class="landing__scene" id="landingScene" aria-hidden="true"></canvas>
+    <div class="landing__main">
+      <section class="landing__hero">
+        <p class="landing__eyebrow">A quiet ledger for small, steady progress.</p>
+        <h2 class="landing__title" id="landingTitle"><span class="sr-only">Ledger · </span><span class="landing__line">把小小的进步，</span><span class="landing__line">安静地记下来。</span></h2>
+        <p class="landing__lede" id="landingLede">Ledger 是一本只属于你的进度账本：打卡习惯，拆解目标，回看每一周。没网也能记，登录后在手机与电脑之间同步。</p>
+        <div class="landing__actions">
+          <button class="btn btn--primary landing__cta" type="button" id="landingCta">登录 / 注册<span class="landing__arrow" aria-hidden="true">→</span></button>
+          <a class="landing__dl" id="landingApk" href="ledger.apk" download><span class="landing__dl-t">下载安卓版</span><span class="landing__dl-ext">APK</span></a>
+        </div>
+      </section>
+
+      <figure class="sheet" aria-hidden="true">
+        <div class="sheet__head">
+          <span class="sheet__title">本周</span>
+          <span class="sheet__days"><i>M</i><i>T</i><i>W</i><i>T</i><i>F</i><i>S</i><i>S</i></span>
+          <span class="sheet__streak">连续</span>
+        </div>
+        <ol class="sheet__rows">
+          <li style="--r:0"><span class="sheet__plot" aria-hidden="true"></span><b class="sheet__seal is-on">读</b><span class="sheet__name">阅读 20 分钟</span><span class="sheet__cells"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="sheet__n">12</span></li>
+          <li style="--r:1"><span class="sheet__plot" aria-hidden="true"></span><b class="sheet__seal is-on">动</b><span class="sheet__name">运动 30 分钟</span><span class="sheet__cells"><i class="on"></i><i></i><i class="on"></i><i></i><i class="on"></i><i></i><i></i></span><span class="sheet__n">3</span></li>
+          <li style="--r:2"><span class="sheet__plot" aria-hidden="true"></span><b class="sheet__seal">眠</b><span class="sheet__name">十一点前睡</span><span class="sheet__cells"><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i></i><i></i><i></i></span><span class="sheet__n">1</span></li>
+          <li style="--r:3"><span class="sheet__plot" aria-hidden="true"></span><b class="sheet__seal is-on">词</b><span class="sheet__name">背 30 个单词</span><span class="sheet__cells"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="sheet__n">26</span></li>
+        </ol>
+        <div class="sheet__foot">
+          <span>本周完成</span>
+          <span class="sheet__bar"><i></i></span>
+          <span class="sheet__pct">68<small>%</small></span>
+        </div>
+      </figure>
+    </div>
+
+    <ul class="landing__features">
+      <li><span class="landing__no" aria-hidden="true">01</span><h3>习惯打卡</h3><p>做完一项，轻点一下，连续的天数慢慢变长。</p></li>
+      <li><span class="landing__no" aria-hidden="true">02</span><h3>目标与步骤</h3><p>大目标拆成看得见的小步骤，一步一步勾掉。</p></li>
+      <li><span class="landing__no" aria-hidden="true">03</span><h3>离线与同步</h3><p>没网也照常记录，联网后同步到每一台设备。</p></li>
+    </ul>
+
+    <footer class="landing__foot">
+      <span>© 2026 Ledger</span>
+      <span>安静地记录，慢慢地变好。</span>
+    </footer>
+  </div>
+
+  <div class="gate__inner">
+    <div class="lang-switch lang-switch--gate" data-lang-switch></div>
+    <button class="gate__back" type="button" id="gateBack" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>返回首页</button>
+    <section class="gate__art">
+      <p class="gate__mark" aria-hidden="true">Ledger<i></i></p>
+      <h2 class="gate__title" id="gateTitle"><span class="sr-only">Ledger · </span>记录每天的一点点。</h2>
+      <p class="gate__lede" id="gateLede">登录后，目标、习惯与打卡记录会在你的设备之间同步。</p>
+    </section>
+
+    <section class="gate__card" aria-label="账号">
+      <button class="icon-btn gate__close" type="button" id="gateClose" aria-label="关闭" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+
+      <div class="auth-view" id="authView">
+        <div class="seg" role="tablist" aria-label="登录或注册">
+          <button class="seg__tab" role="tab" type="button" id="tabIn" aria-selected="true" aria-controls="authPanel" data-tab="in">登录</button>
+          <button class="seg__tab" role="tab" type="button" id="tabUp" aria-selected="false" aria-controls="authPanel" data-tab="up" tabindex="-1">注册</button>
+          <span class="seg__ink" aria-hidden="true"></span>
+        </div>
+
+        <div class="auth-panel" id="authPanel" role="tabpanel" aria-labelledby="tabIn">
+        <form class="auth" id="authForm" novalidate>
+          <p class="auth__notice" id="authNotice" hidden data-i18n-html="@notice"><b>云同步尚未配置。</b>请在 <code>config.js</code> 中填入 Supabase Publishable key，目前可先使用本机模式。</p>
+          <div class="field">
+            <label for="authEmail">邮箱</label>
+            <input id="authEmail" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="you@example.com" required aria-describedby="authEmailErr">
+            <small class="field__err" id="authEmailErr" aria-live="polite"></small>
+          </div>
+          <div class="field" id="pwField">
+            <label for="authPass">密码</label>
+            <div class="pw">
+              <input id="authPass" name="password" type="password" autocomplete="current-password" minlength="6" required aria-describedby="authPassHint authPassErr">
+              <button class="pw__eye" type="button" id="pwToggle" aria-label="显示密码" aria-pressed="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/><path class="pw__slash" d="M4 20 20 4"/></svg>
+              </button>
+            </div>
+            <small id="authPassHint" class="field__hint" hidden>至少 6 位，建议字母与数字混合</small>
+            <small class="field__err" id="authPassErr" aria-live="polite"></small>
+          </div>
+          <p class="auth__msg" id="authMsg" role="alert"></p>
+          <button class="btn btn--primary btn--block" type="submit" id="authSubmit"><span class="btn__spin" aria-hidden="true"></span><span class="btn__label">登录</span></button>
+          <div class="auth__alt">
+            <button class="link-btn" type="button" id="magicBtn">发送免密登录链接</button>
+            <button class="link-btn link-btn--quiet" type="button" id="forgotBtn">忘记密码？</button>
+          </div>
+        </form>
+        </div>
+      </div>
+
+      <div class="auth-sent" id="authSent" hidden tabindex="-1" aria-labelledby="sentTitle">
+        <div class="auth-sent__stamp" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="6" width="17" height="12" rx="2"/><path d="M4 7.5l8 5.5 8-5.5"/></svg></div>
+        <h3 class="auth-sent__title" id="sentTitle">请查收邮件</h3>
+        <p class="auth-sent__text" id="sentText"></p>
+        <div class="auth-sent__actions">
+          <button class="btn btn--ghost" type="button" id="sentBack">返回</button>
+          <button class="link-btn" type="button" id="sentResend" disabled>重新发送</button>
+        </div>
+      </div>
+
+      <div class="gate__local">
+        <span class="gate__or" aria-hidden="true">或</span>
+        <button class="gate__local-btn" type="button" id="gateLocal">不登录，仅本机使用 <span aria-hidden="true">→</span></button>
+        <small>数据只保存在这台设备的浏览器里，之后随时可以登录并上传。</small>
+      </div>
+    </section>
+    <ul class="gate__points">
+      <li><b>离线优先</b><span>没网也能记，联网再同步</span></li>
+      <li><b>仅你可见</b><span>账号之间彼此隔离</span></li>
+      <li><b>随时导出</b><span>JSON 备份随时可用</span></li>
+    </ul>
+  </div>
+</dialog>
+
+<dialog class="dlg dlg--sm" id="dlgAccount" aria-labelledby="dlgAccountTitle">
+  <form method="dialog" class="dlg__form">
+    <h2 class="dlg__title" id="dlgAccountTitle">账号与同步</h2>
+    <div class="acct">
+      <span class="acct__seal" id="acctSeal" aria-hidden="true">L</span>
+      <div class="acct__who"><span class="acct__label">已登录</span><b class="acct__email" id="acctEmail">—</b></div>
+    </div>
+    <dl class="acct__rows">
+      <div><dt>同步状态</dt><dd><span class="sync-dot" id="acctDot" data-state="synced" aria-hidden="true"></span><span id="acctStatus">已同步</span></dd></div>
+      <div><dt>上次同步</dt><dd id="acctLast">—</dd></div>
+      <div><dt>本机数据</dt><dd id="acctLocal">—</dd></div>
+    </dl>
+    <div class="dlg__actions">
+      <button class="btn btn--danger-ghost" type="button" id="acctSignOut">退出登录</button>
+      <span class="spacer"></span>
+      <button class="btn btn--ghost" type="button" id="acctSync">立即同步</button>
+      <button class="btn btn--primary" value="close">完成</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dlg dlg--sm" id="dlgSignOut" aria-labelledby="dlgSignOutTitle">
+  <form method="dialog" class="dlg__form">
+    <h2 class="dlg__title" id="dlgSignOutTitle">退出登录</h2>
+    <p class="dlg__lede" id="dlgSignOutText">本机会保留一份数据副本，方便离线查看。如果这是公共设备，建议一并清除。</p>
+    <div class="dlg__actions">
+      <button class="btn btn--danger-ghost" value="clear">清除本机数据并退出</button>
+      <span class="spacer"></span>
+      <button class="btn btn--ghost" value="cancel">取消</button>
+      <button class="btn btn--primary" value="keep">退出</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dlg" id="dlgSync" data-sticky aria-labelledby="dlgSyncTitle" aria-describedby="dlgSyncText">
+  <form method="dialog" class="dlg__form">
+    <h2 class="dlg__title" id="dlgSyncTitle">本机与云端不一致</h2>
+    <p class="dlg__lede" id="dlgSyncText">本机和云端都有修改。请选择保留哪一份，另一份会被替换。</p>
+    <div class="pick" id="syncPick"></div>
+    <p class="pick__tip">拿不准？先 <button class="link-btn" type="button" id="syncExport">导出本机备份</button>，再做选择。</p>
+  </form>
+</dialog>
+
+<dialog class="dlg dlg--sm" id="dlgNewPass" aria-labelledby="dlgNewPassTitle">
+  <form method="dialog" class="dlg__form" id="formNewPass" novalidate>
+    <h2 class="dlg__title" id="dlgNewPassTitle">设置新密码</h2>
+    <p class="dlg__lede">你正通过重置链接登录，请设置一个新密码。</p>
+    <div class="field">
+      <label for="newPass">新密码</label>
+      <input id="newPass" type="password" autocomplete="new-password" minlength="6" required aria-describedby="newPassErr">
+      <small class="field__err" id="newPassErr" aria-live="polite"></small>
+    </div>
+    <div class="dlg__actions">
+      <span class="spacer"></span>
+      <button class="btn btn--ghost" value="cancel" formnovalidate>稍后</button>
+      <button class="btn btn--primary" type="submit" value="ok" id="newPassOk">保存新密码</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script src="i18n.js?v=12" defer></script>
+<script src="skin.js?v=12" defer></script>
+<script src="crew.js?v=12" defer></script>
+<script src="app.js?v=12" defer></script>
+<script src="cloud.js?v=12" defer></script>
+</body>
+</html>

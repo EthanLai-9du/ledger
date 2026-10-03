@@ -1,0 +1,31 @@
+{
+  "appId": "com.ethanlai.ledger",
+  "appName": "Ledger",
+  "webDir": "www",
+  "backgroundColor": "#F6F5F1",
+  "server": {
+    "androidScheme": "https",
+    "hostname": "localhost"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "appendUserAgent": "LedgerAndroid"
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "LIGHT",
+      "backgroundColor": "#F6F5F1"
+    },
+    "SplashScreen": {
+      "launchShowDuration": 0,
+      "launchAutoHide": true,
+      "backgroundColor": "#F6F5F1",
+      "showSpinner": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_ledger",
+      "iconColor": "#4A6A59"
+    }
+  }
+}
