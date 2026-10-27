@@ -1,12 +1,14 @@
 # Ledger
 
-> **中文简介**：Ledger 是一个安静的个人进度账本——拆解目标、每天打卡习惯、看本周一览和年度热力图，每天可以记一句笔记。
-> 纯静态 PWA（原生 JavaScript，无构建步骤），**离线优先**：数据先存本机，登录后通过 Supabase（Auth + Postgres + RLS）自动同步，
-> 用版本号（rev）乐观锁处理多设备冲突。有田园 / 电玩 / 星夜三套像素主题和原来的简约主题，支持中英双语、可安装到主屏幕，另有 Capacitor 打包的安卓 App（含每天提醒）。
-> 详细的中文配置与部署说明见 [docs/SETUP.zh-CN.md](docs/SETUP.zh-CN.md)。
+Status: v12 shipped · learning / portfolio
 
-**A quiet, offline-first progress ledger for goals and daily habits.**
-Vanilla-JS PWA · Supabase Auth + Postgres (RLS) · revision-based sync · Capacitor Android · 中文 / English
+Pixel habit tracker. Check in each day, look at the week and a year heatmap, and keep a one-line note if you want.
+
+Vanilla-JS PWA (no build step) · offline first, Supabase sync when you sign in · Capacitor Android · 中文 / English
+
+This is a finished-enough portfolio and learning project (v12 shipped). It is not a commercial product.
+
+> **中文简介**：拆解目标、每天打卡习惯、看本周和年度热力图，每天可以记一句笔记。纯静态 PWA，数据先存本机，登录后用 Supabase 同步。主题有田园、电玩、星夜和简约，中英双语，可装到主屏幕，另有安卓 App。中文配置与部署见 [docs/SETUP.zh-CN.md](docs/SETUP.zh-CN.md)。
 
 **Live:** <https://ledger-ethan.netlify.app> · **Android APK:** [GitHub Releases](https://github.com/EthanLai-9du/ledger/releases/latest) or <https://ledger-ethan.netlify.app/ledger.apk> (debug-signed, sideload) · **Version:** v12
 
@@ -49,13 +51,9 @@ Vanilla-JS PWA · Supabase Auth + Postgres (RLS) · revision-based sync · Capac
 
 ## What it is
 
-Ledger is a small personal tool for keeping track of steady progress: break a goal into steps, check off daily habits, and see the
-week and the last six months at a glance. It is deliberately calm — warm paper, graphite ink and a single ink-green accent that
-only ever means "done".
+Break a goal into steps, check off daily habits, and look at the week plus the last six months. Minimal is the plain paper look (one green means done). Farm, Arcade, and Night are the pixel themes.
 
-It runs entirely in the browser with no backend of its own. Data is written to the device first, so the app opens and works
-offline; signing in (email + password or magic link) syncs one JSON document per user to Supabase. The same code ships as an
-installable PWA and, wrapped with Capacitor, as an Android app.
+It runs in the browser. There is no app server. Data is saved on the device first, so it works offline. Sign in with email and password or a magic link, and one JSON document per user syncs to Supabase. The same code is the installable PWA and the Capacitor Android app.
 
 ## Features
 
